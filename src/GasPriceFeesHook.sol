@@ -116,7 +116,12 @@ contract GasPriceFeesHook is BaseHook {
 
     function _getFee() internal view returns (uint24) {
         // Get the current gas price
-        uint128 gasPrice = uint128(tx.gasprice);
+        uint256 gasPrice = tx.gasprice;
+        if(gasPrice > type(uint128).max) {
+            gasPrice = type(uint128).max;
+        } else {
+            gasPrice = uint128(tx.gasprice);
+        }
 
         // If the gas price > movingAverageGasPrice by 10% or more, then half the fees
         if (gasPrice > movingAverageGasPrice * 11 / 10) {
