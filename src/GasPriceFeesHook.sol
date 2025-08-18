@@ -33,7 +33,6 @@ contract GasPriceFeesHook is BaseHook {
 
     constructor (address _poolManager) BaseHook(IPoolManager(_poolManager)) {
         _updateMovingAverage();
-
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -73,12 +72,16 @@ contract GasPriceFeesHook is BaseHook {
     }
 
     function _beforeSwap(
-        address,
+        address _sender,
         PoolKey calldata key,
-        SwapParams calldata,
-        bytes calldata
+        SwapParams calldata _swapParams,
+        bytes calldata _hookData
     ) internal view override returns (bytes4, BeforeSwapDelta, uint24) {
-        // TODO
+        // We need to capture the fees that we will be charging, based on gas prices
+        uint24 fee = _getFee();
+
+        // Set the fee with our override flag
+        uint24 feeWithFlag = fee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
@@ -90,7 +93,8 @@ contract GasPriceFeesHook is BaseHook {
         BalanceDelta,
         bytes calldata
     ) internal override returns (bytes4, int128) {
-        // TODO
+        // Update our moving average gas price
+        _updateMovingAverage();
 
         return (this.afterSwap.selector, 0);
     }
@@ -106,5 +110,25 @@ contract GasPriceFeesHook is BaseHook {
 
         // Increment the count of transactions tracked
         movingAverageGasPriceCount++;
+    }
+
+    // Internal function that determines a fee based on the recent gas prices compared to the current gas price
+
+    function _getFee() internal view returns (uint24) {
+        // Get the current gas price
+        uint128 gasPrice = uint128(tx.gasPrice);
+
+        // If the gas price > movingAverageGasPrice by 10% or more, then half the fees
+        if (gasPrice > movingAverageGasPrice * 11 / 10) {
+            return BASE_FEE / 2;
+        }
+
+        // If the gas price < movingAverageGasPrice by 10% or more, then double the fees
+        if (gasPrice < movingAverageGasPrice * 9 / 10) {
+            return BASE_FEE * 2;
+        }
+
+        // Otherwise, return the base fee
+        return BASE_FEE;
     }
 }
