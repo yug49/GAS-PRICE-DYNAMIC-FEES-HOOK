@@ -64,7 +64,7 @@ contract GasPriceFeesHook is BaseHook {
         uint160 _sqrtPriceX96
     ) internal pure override returns (bytes4) {
         // Ensure that the fees passed is dynamic
-        if(!_key.fee.isDynamicFees()) {
+        if(!_key.fee.isDynamicFee()) {
             revert GasPriceFeesHook__MustUseDynamicFee();
         }
 
@@ -116,7 +116,7 @@ contract GasPriceFeesHook is BaseHook {
 
     function _getFee() internal view returns (uint24) {
         // Get the current gas price
-        uint128 gasPrice = uint128(tx.gasPrice);
+        uint128 gasPrice = uint128(tx.gasprice);
 
         // If the gas price > movingAverageGasPrice by 10% or more, then half the fees
         if (gasPrice > movingAverageGasPrice * 11 / 10) {
