@@ -65,8 +65,56 @@ contract GasPriceFeesHookTest is Test, Deployers {
         );
     }
 
-    function test_FfeeUpdatesWithGasPrice() public {
-        // TODO
+    function test_beforeInitialize_revertIfNotDynamicFees() public {
+        // Initialize a pool
+        vm.expectRevert();
+        (key, ) = initPool(
+            currency0,
+            currency1,
+            hook, 
+            1000000,
+            SQRT_PRICE_1_1
+        );
+    }
+
+    function test_feeUpdatesWithGasPrice() public {
+        // define our swap papameters that we will use
+        SwapParams memory params = SwapParams({
+            zeroForOne: true,
+            amountSpecified: -0.00001 ether,
+            sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+        });
+
+        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest.TestSettings(false, false);
+
+        // first we will ensure that our current moving average gas price is 10
+        assertEq(hook.movingAverageGasPrice(), 10 gwei);
+        assertEq(hook.movingAverageGasPriceCount(), 1);
+
+        // we will then conduct a swap with gas price at 10 gwei and this should just charge our base fee
+        // charge our base fee
+        swapRouter.swap(key, params, testSettings, ZERO_BYTES);
+
+        assertEq(hook.movingAverageGasPrice(), 10 gwei);
+        assertEq(hook.movingAverageGasPriceCount(), 2);
+
+        // we will then do a low gas price which will charge higher fees
+        // Should be base fee * 2
+        vm.txGasPrice(4 gwei);
+
+        swapRouter.swap(key, params, testSettings, ZERO_BYTES);
+
+        assertEq(hook.movingAverageGasPrice(), 8 gwei);
+        assertEq(hook.movingAverageGasPriceCount(), 3);
+
+        // we will then do a third swap with high gas price which wil charge higher gees
+        // should be base fee / 2
+        vm.txGasPrice(12 gwei);
+
+        swapRouter.swap(key, params, testSettings, ZERO_BYTES);
+
+        assertEq(hook.movingAverageGasPrice(), 9 gwei);
+        assertEq(hook.movingAverageGasPriceCount(), 4);
     }
     
 }
