@@ -83,6 +83,11 @@ contract GasPriceFeesHook is BaseHook {
         // Set the fee with our override flag
         uint24 feeWithFlag = fee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
+        // the fee is relevant to the amountSpecified in the swap
+        // if the amountSpecified is negative and zeroForOne is true then we are swapping 0 -> 1 and the fee is calculated by the input token
+        // if i come to an ETH <> Token pool
+        // I will be paying 0.01 ETH as fees for each 1 ETH swap from this pool
+
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
